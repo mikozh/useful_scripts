@@ -56,14 +56,37 @@ if [ "$(uname -m)" != "x86_64" ]; then
     exit 1
 fi
 
-if ! command -v nvidia-smi >/dev/null 2>&1; then
+###############################################################################
+# NVIDIA / WSL detection
+###############################################################################
+
+IS_WSL=0
+
+if grep -qi microsoft /proc/version 2>/dev/null || \
+   grep -qi microsoft /proc/sys/kernel/osrelease 2>/dev/null; then
+    IS_WSL=1
+fi
+
+if [ "$IS_WSL" -eq 1 ]; then
+    echo "WSL2 environment detected."
+
+    # NVIDIA's WSL driver utilities live here.
+    export PATH="/usr/lib/wsl/lib:$PATH"
+
+    NVIDIA_SMI="/usr/lib/wsl/lib/nvidia-smi"
+else
+    NVIDIA_SMI="$(command -v nvidia-smi || true)"
+fi
+
+if [ ! -x "$NVIDIA_SMI" ]; then
     echo "ERROR: nvidia-smi was not found."
-    echo "The NVIDIA driver/GPU must already be working."
+    echo "The NVIDIA GPU must already be accessible."
     exit 1
 fi
 
+echo
 echo "=== NVIDIA GPU ==="
-nvidia-smi
+"$NVIDIA_SMI"
 echo
 
 if [ ! -f /etc/os-release ]; then
